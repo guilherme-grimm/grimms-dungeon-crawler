@@ -24,8 +24,9 @@ var (
 	stairStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")).Bold(true)
 
 	// Environment Styles
-	wallStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#444455"))
-	floorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#222222"))
+	wallStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("#444455"))
+	touchingWallStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#255557"))
+	floorStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#222222"))
 
 	// Health Colors
 	hpHighStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")).Bold(true)
@@ -444,7 +445,9 @@ func (m *GameStateModel) View() tea.View {
 				mapSb.WriteString(attackStyle.Render(char))
 			case MONSTER:
 				mapSb.WriteString(monsterStyle.Render(char))
-			case WALL, FILLER_WALL, TOUCHING_WALL, PASSAGE_WALL:
+			case TOUCHING_WALL:
+				mapSb.WriteString(touchingWallStyle.Render(char))
+			case WALL, FILLER_WALL, PASSAGE_WALL:
 				mapSb.WriteString(wallStyle.Render(char))
 			case FLOOR:
 				mapSb.WriteString(floorStyle.Render(char))
