@@ -11,8 +11,9 @@ var (
 	stairStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")).Bold(true)
 
 	// Environment Styles
-	wallStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("#444455"))
-	touchingWallStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#255557"))
+	wallStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("#111118"))
+	touchingWallStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#556677")).Bold(true)
+	fillerWallStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#1a1a22"))
 	floorStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#222222"))
 
 	// Health Colors
@@ -42,9 +43,9 @@ var (
 	helpStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#555555")).Italic(true)
 
 	// Menu Styles
-	titleStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0044")).Bold(true)
-	subtitleStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#777777")).Bold(true)
-	promptStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00"))
+	titleStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0044")).Bold(true)
+	subtitleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#777777")).Bold(true)
+	promptStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00"))
 
 	// Death Screen Styles
 	deathStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000"))

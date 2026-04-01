@@ -41,31 +41,10 @@ func (m *GameStateModel) PlayerAttack() tea.Cmd {
 	})
 }
 
-func (m *GameStateModel) UpdatePlayerPos(move string) bool {
-	m.Turn = PLAYER_TURN
-	endTile, moved := m.MovePlayer(move)
-	switch endTile {
-	case STAIRS:
-		dungeon := CreateNewDungeon()
-		cx, cy := dungeon.Rooms[0].Center()
-
-		m.Player.X = cx
-		m.Player.Y = cy
-		m.Dungeon = dungeon.Tiles
-		m.Rooms = dungeon.Rooms
-		m.Monsters = dungeon.Monsters
-		m.Floor++
-
-		m.Dungeon[cy][cx] = Tile{Kind: PLAYER}
-		m.Log = append(m.Log, "Another one enters the pit of despair...")
-	}
-
-	return moved
-}
-
-func (m *GameStateModel) MovePlayer(move string) (TileKind, bool) {
+// MovePlayerOneStep moves the player one tile in the given direction.
+// Returns the destination tile kind and whether the move succeeded.
+func (m *GameStateModel) MovePlayerOneStep(move string) (TileKind, bool) {
 	newX, newY := m.Player.X, m.Player.Y
-	m.Turn = PLAYER_TURN
 
 	switch move {
 	case "up", "k":
@@ -103,10 +82,26 @@ func (m *GameStateModel) MovePlayer(move string) (TileKind, bool) {
 	// Save what's at the destination
 	m.Player.StandingOn = m.Dungeon[newY][newX].Kind
 
-	// Move
+	// Move the player
 	m.Player.X = newX
 	m.Player.Y = newY
 	m.Dungeon[newY][newX].Kind = PLAYER
 
 	return destinationKind, true
+}
+
+// HandleStairs transitions to a new dungeon floor.
+func (m *GameStateModel) HandleStairs() {
+	dungeon := CreateNewDungeon()
+	cx, cy := dungeon.Rooms[0].Center()
+
+	m.Player.X = cx
+	m.Player.Y = cy
+	m.Dungeon = dungeon.Tiles
+	m.Rooms = dungeon.Rooms
+	m.Monsters = dungeon.Monsters
+	m.Floor++
+
+	m.Dungeon[cy][cx] = Tile{Kind: PLAYER}
+	m.Log = append(m.Log, "Another one enters the pit of despair...")
 }

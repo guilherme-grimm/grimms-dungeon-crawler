@@ -5,36 +5,33 @@ import "math/rand/v2"
 func (m *GameStateModel) MoveMonsters() {
 	for i := range m.Monsters {
 		monster := &m.Monsters[i]
-		if monster.HP > 0 {
-			newPos := m.greedyMove(Direction{m.Player.X, m.Player.Y}, Direction{monster.X, monster.Y})
+		for range monster.MoveSpeed {
+			if monster.HP > 0 {
+				newPos := m.greedyMove(Direction{m.Player.X, m.Player.Y}, Direction{monster.X, monster.Y})
 
-			if newPos.X == monster.X && newPos.Y == monster.Y {
-				if manhatann(Direction{monster.X, monster.Y}, Direction{m.Player.X, m.Player.Y}) == 1 {
-					m.Player.HP -= monster.ATK
-					m.Dungeon[monster.Y][monster.X].Kind = MONSTER_ATTACKING
-					m.Log = append(m.Log, "OH NO! YOU GOT HIT!")
-					m.Dungeon[monster.Y][monster.X].Kind = MONSTER
+				if newPos.X == monster.X && newPos.Y == monster.Y {
+					if manhatann(Direction{monster.X, monster.Y}, Direction{m.Player.X, m.Player.Y}) == 1 {
+						m.Player.HP -= monster.ATK
+						m.Dungeon[monster.Y][monster.X].Kind = MONSTER
+					}
+					continue
 				}
-				continue
+
+				// Restore what was underneath
+				m.Dungeon[monster.Y][monster.X].Kind = monster.StandingOn
+
+				// Save what's at the destination
+				monster.StandingOn = m.Dungeon[newPos.Y][newPos.X].Kind
+
+				// Move
+				monster.X = newPos.X
+				monster.Y = newPos.Y
+				m.Dungeon[newPos.Y][newPos.X].Kind = MONSTER
 			}
-
-			// Restore what was underneath
-			m.Dungeon[monster.Y][monster.X].Kind = monster.StandingOn
-
-			// Save what's at the destination
-			monster.StandingOn = m.Dungeon[newPos.Y][newPos.X].Kind
-
-			// Move
-			monster.X = newPos.X
-			monster.Y = newPos.Y
-			m.Dungeon[newPos.Y][newPos.X].Kind = MONSTER
 		}
 	}
 }
 
-//	func (m *GameStateModel) moveBFS() Direction {
-//		re
-//	}
 func (m *GameStateModel) greedyMove(targetPos, enemyPos Direction) Direction {
 	dirs := []Direction{UP, DOWN, LEFT, RIGHT}
 

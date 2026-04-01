@@ -17,6 +17,7 @@ func initialGameState() GameStateModel {
 		X:          cx,
 		Y:          cy,
 		Name:       "Grimmm",
+		MoveSpeed:  1,
 		StandingOn: FLOOR,
 		HP:         20,
 		ATK:        5,
@@ -90,21 +91,43 @@ func (m *GameStateModel) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *GameStateModel) updateGame(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		if m.Turn != PLAYER_TURN {
+		if m.Turn != PLAYER_TURN || m.StepsRemaining > 0 {
 			return m, nil
 		}
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "up", "k", "down", "j", "left", "l", "right", "h":
-			moved := m.UpdatePlayerPos(msg.String())
-			if moved {
-				m.Turn = WORLD_TURN
-				return m, tea.Tick(time.Millisecond*10, func(t time.Time) tea.Msg {
-					return PlayerTurnFinished{}
+			m.MoveInput = msg.String()
+			m.StepsRemaining = m.Player.MoveSpeed
+
+			// Take the first step immediately
+			endTile, moved := m.MovePlayerOneStep(m.MoveInput)
+			m.StepsRemaining--
+
+			if !moved {
+				m.StepsRemaining = 0
+				return m, nil
+			}
+
+			if endTile == STAIRS {
+				m.StepsRemaining = 0
+				m.HandleStairs()
+				return m, nil
+			}
+
+			// If more steps, chain the next one
+			if m.StepsRemaining > 0 {
+				return m, tea.Tick(time.Millisecond*50, func(t time.Time) tea.Msg {
+					return MovementStepMsg{}
 				})
 			}
-			return m, nil
+
+			// All steps done, pass to world turn
+			m.Turn = WORLD_TURN
+			return m, tea.Tick(time.Millisecond*10, func(t time.Time) tea.Msg {
+				return PlayerTurnFinished{}
+			})
 		case "t":
 			m.Turn = WORLD_TURN
 			return m, tea.Tick(time.Millisecond*10, func(t time.Time) tea.Msg {
@@ -114,6 +137,31 @@ func (m *GameStateModel) updateGame(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd := m.PlayerAttack()
 			return m, cmd
 		}
+	case MovementStepMsg:
+		endTile, moved := m.MovePlayerOneStep(m.MoveInput)
+		m.StepsRemaining--
+
+		if !moved || endTile == STAIRS {
+			m.StepsRemaining = 0
+		}
+
+		if endTile == STAIRS {
+			m.HandleStairs()
+			return m, nil
+		}
+
+		// More steps remaining, keep going
+		if m.StepsRemaining > 0 && moved {
+			return m, tea.Tick(time.Millisecond*50, func(t time.Time) tea.Msg {
+				return MovementStepMsg{}
+			})
+		}
+
+		// Done moving, world turn
+		m.Turn = WORLD_TURN
+		return m, tea.Tick(time.Millisecond*10, func(t time.Time) tea.Msg {
+			return PlayerTurnFinished{}
+		})
 	case attackFinishedMsg:
 		m.PlayerIsAttacking = false
 		m.Dungeon[m.Player.Y][m.Player.X].Kind = PLAYER
@@ -241,10 +289,18 @@ func (m *GameStateModel) viewGame() string {
 			case MONSTER_ATTACKING:
 				mapSb.WriteString(attackStyle.Render(char))
 			case MONSTER:
-				mapSb.WriteString(monsterStyle.Render(char))
+				glyph := "S"
+				for _, mon := range m.Monsters {
+					if mon.X == tile.X && mon.Y == tile.Y {
+						glyph = string(mon.Glyph)
+					}
+				}
+				mapSb.WriteString(monsterStyle.Render(glyph))
 			case TOUCHING_WALL:
 				mapSb.WriteString(touchingWallStyle.Render(char))
-			case WALL, FILLER_WALL, PASSAGE_WALL:
+			case FILLER_WALL:
+				mapSb.WriteString(fillerWallStyle.Render(char))
+			case WALL:
 				mapSb.WriteString(wallStyle.Render(char))
 			case FLOOR:
 				mapSb.WriteString(floorStyle.Render(char))

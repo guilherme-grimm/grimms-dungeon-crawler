@@ -5,7 +5,7 @@ import "time"
 type Screen int
 
 const (
-	MENU_SCREEN  Screen = iota
+	MENU_SCREEN Screen = iota
 	GAME_SCREEN
 	DEATH_SCREEN
 )
@@ -30,6 +30,8 @@ type GameStateModel struct {
 	//Player state
 	PlayerIsAttacking bool
 	PlayerDirection   Direction
+	StepsRemaining    int
+	MoveInput         string
 }
 
 type Direction struct {
@@ -56,10 +58,9 @@ var (
 	PLAYER            TileKind = '@'
 	PLAYER_ATTACKING  TileKind = 'A'
 	FLOOR             TileKind = '·'
-	WALL              TileKind = '#'
-	TOUCHING_WALL     TileKind = '□'
-	FILLER_WALL       TileKind = '█'
-	PASSAGE_WALL      TileKind = '='
+	WALL              TileKind = '█'
+	TOUCHING_WALL     TileKind = '#'
+	FILLER_WALL       TileKind = '░'
 	STAIRS            TileKind = '▼'
 	MONSTER           TileKind = 'S'
 	MONSTER_ATTACKING TileKind = 'D'
@@ -84,8 +85,11 @@ type Tile struct {
 
 type Entity struct {
 	X, Y        int
+	MoveSpeed   int // determine how much tiles per turn
+	AttackSpeed int // determine attack cooldown in turns
 	Name        string
 	HP, ATK     int
+	Glyph       rune
 	StandingOn  TileKind
 	IsAttacking bool
 }

@@ -5,6 +5,36 @@ import (
 	"slices"
 )
 
+// Possible Monsters
+var (
+	SNEK Entity = Entity{
+		Name:       "Snek",
+		Glyph:      'S',
+		MoveSpeed:  2,
+		HP:         10,
+		ATK:        2,
+		StandingOn: FLOOR,
+	}
+	BRUTE Entity = Entity{
+		Name:       "Brute",
+		MoveSpeed:  1,
+		Glyph:      'B',
+		HP:         10,
+		ATK:        3,
+		StandingOn: FLOOR,
+	}
+	SHADE Entity = Entity{
+		Name:       "Shade",
+		MoveSpeed:  3,
+		Glyph:      'W',
+		HP:         10,
+		ATK:        1,
+		StandingOn: FLOOR,
+	}
+)
+
+var possibleMonsters []Entity = []Entity{SNEK, BRUTE, SHADE}
+
 func CreateNewDungeon() Dungeon {
 	tiles := make([][]Tile, HEIGHT)
 	// Fill with Walls
@@ -112,21 +142,19 @@ func CreateNewDungeon() Dungeon {
 		room := rooms[i]
 		numMonsters := rand.IntN(3) + 1
 
-		for j := 0; j < numMonsters; j++ {
+		for range numMonsters {
 			mx := room.X + rand.IntN(room.W)
 			my := room.Y + rand.IntN(room.H)
 
 			if tiles[my][mx].Kind == FLOOR {
 				tiles[my][mx].Kind = MONSTER
 
-				monsters = append(monsters, Entity{
-					X:          mx,
-					Y:          my,
-					Name:       "Snek",
-					HP:         10,
-					ATK:        2,
-					StandingOn: FLOOR,
-				})
+				entry := rand.IntN(len(possibleMonsters))
+				mon := possibleMonsters[entry]
+				mon.X = mx
+				mon.Y = my
+
+				monsters = append(monsters, mon)
 			}
 		}
 	}
