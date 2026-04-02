@@ -11,12 +11,13 @@ import (
 )
 
 func initialGameState() GameStateModel {
-	dungeon := CreateNewDungeon()
-	cx, cy := dungeon.Rooms[0].Center()
+	dungeon := CreateNewDungeon(0)
+	cx, cy := dungeon.StartX, dungeon.StartY
 	player := Entity{
 		X:          cx,
 		Y:          cy,
 		Name:       "Grimmm",
+		ViewRadius: 10,
 		MoveSpeed:  1,
 		StandingOn: FLOOR,
 		HP:         20,
@@ -26,18 +27,22 @@ func initialGameState() GameStateModel {
 	dungeon.Tiles[player.Y][player.X] = Tile{
 		Kind: PLAYER,
 	}
-
-	return GameStateModel{
-		Screen:   MENU_SCREEN,
-		Dungeon:  dungeon.Tiles,
-		Player:   player,
-		Monsters: dungeon.Monsters,
-		Items:    []any{},
-		Floor:    1,
-		Rooms:    dungeon.Rooms,
-		Turn:     PLAYER_TURN,
-		Log:      []string{"Leave behind all hope thou who enter here..."},
+	m := GameStateModel{
+		Screen:          MENU_SCREEN,
+		Dungeon:         dungeon.Tiles,
+		Player:          player,
+		Monsters:        dungeon.Monsters,
+		Items:           []any{},
+		Floor:           1,
+		Rooms:           dungeon.Rooms,
+		Turn:            PLAYER_TURN,
+		PlayerDirection: DOWN,
+		Log:             []string{"Leave behind all hope thou who enter here..."},
 	}
+
+	m.UpdateVisibility()
+
+	return m
 }
 
 func main() {
@@ -128,6 +133,37 @@ func (m *GameStateModel) updateGame(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Tick(time.Millisecond*10, func(t time.Time) tea.Msg {
 				return PlayerTurnFinished{}
 			})
+		// case "shift + up", "K", "shift + down", "J", "shift + left", "L", "shift +right", "H":
+		// 	m.MoveInput = msg.String()
+		// 	m.StepsRemaining = m.Player.MoveSpeed + 1
+		//
+		// 	// Take the first step immediately
+		// 	endTile, moved := m.MovePlayerOneStep(m.MoveInput)
+		// 	m.StepsRemaining--
+		//
+		// 	if !moved {
+		// 		m.StepsRemaining = 0
+		// 		return m, nil
+		// 	}
+		//
+		// 	if endTile == STAIRS {
+		// 		m.StepsRemaining = 0
+		// 		m.HandleStairs()
+		// 		return m, nil
+		// 	}
+		//
+		// 	// If more steps, chain the next one
+		// 	if m.StepsRemaining > 0 {
+		// 		return m, tea.Tick(time.Millisecond*50, func(t time.Time) tea.Msg {
+		// 			return MovementStepMsg{}
+		// 		})
+		// 	}
+		//
+		// 	// All steps done, pass to world turn
+		// 	m.Turn = WORLD_TURN
+		// 	return m, tea.Tick(time.Millisecond*10, func(t time.Time) tea.Msg {
+		// 		return PlayerTurnFinished{}
+		// 	})
 		case "t":
 			m.Turn = WORLD_TURN
 			return m, tea.Tick(time.Millisecond*10, func(t time.Time) tea.Msg {
@@ -162,13 +198,23 @@ func (m *GameStateModel) updateGame(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Tick(time.Millisecond*10, func(t time.Time) tea.Msg {
 			return PlayerTurnFinished{}
 		})
-	case attackFinishedMsg:
-		m.PlayerIsAttacking = false
-		m.Dungeon[m.Player.Y][m.Player.X].Kind = PLAYER
-		m.Turn = WORLD_TURN
-		return m, tea.Tick(time.Millisecond*10, func(t time.Time) tea.Msg {
-			return PlayerTurnFinished{}
-		})
+	case attackPhaseMsg:
+		switch msg.Phase {
+		case 1:
+			m.AttackPhase = 2
+			return m, tea.Tick(time.Millisecond*60, func(t time.Time) tea.Msg {
+				return attackPhaseMsg{Phase: 2}
+			})
+		case 2:
+			m.AttackPhase = 0
+			m.MonsterFlashPos = nil
+			m.PlayerIsAttacking = false
+			m.Dungeon[m.Player.Y][m.Player.X].Kind = PLAYER
+			m.Turn = WORLD_TURN
+			return m, tea.Tick(time.Millisecond*10, func(t time.Time) tea.Msg {
+				return PlayerTurnFinished{}
+			})
+		}
 	case PlayerTurnFinished:
 		m.MoveMonsters()
 		if m.Player.HP <= 0 {
@@ -264,23 +310,104 @@ func (m *GameStateModel) viewDeath() string {
 	return lipgloss.JoinVertical(lipgloss.Center, skull, "", message, "", stats, "", prompt, "", quit)
 }
 
+const (
+	viewPortH = 40
+	viewPortW = 60
+)
+
 func (m *GameStateModel) viewGame() string {
 	// ---------------------------------------------------------
 	// 1. BUILD THE MAP
 	// ---------------------------------------------------------
+	// Camera settings:
+	vpW := min(viewPortW, len(m.Dungeon[0]), m.TermWidth-30)
+	vpH := min(viewPortH, len(m.Dungeon), m.TermHeight-8)
+	camX := m.Player.X - vpW/2
+	camY := m.Player.Y - vpH/2
+
+	camX = max(0, min(camX, len(m.Dungeon[0])-vpW))
+	camY = max(0, min(camY, len(m.Dungeon)-vpH))
+
 	mapSb := strings.Builder{}
-	for _, row := range m.Dungeon {
-		for _, tile := range row {
+	for y := camY; y < camY+vpH; y++ {
+		for x := camX; x < camX+vpW; x++ {
+			tile := m.Dungeon[y][x]
 			char := string(tile.Kind)
 
-			// UI Trick: We can stub the Fog of War here!
-			// If you later set Explored to false upon generation, this will hide them.
-			if !tile.Explored {
-				// Uncomment this when you want to enable pure darkness
-				// mapSb.WriteString(" ")
-				// continue
+			// Slash overlay / monster flash during attack animation
+			if m.AttackPhase > 0 && x == m.AttackSlashPos.X && y == m.AttackSlashPos.Y {
+				if m.MonsterFlashPos != nil && x == m.MonsterFlashPos.X && y == m.MonsterFlashPos.Y {
+					// Monster hit — render flashed monster glyph
+					glyph := string(tile.Kind)
+					for _, mon := range m.Monsters {
+						if mon.X == x && mon.Y == y {
+							glyph = string(mon.Glyph)
+						}
+					}
+					mapSb.WriteString(monsterFlashStyle.Render(glyph))
+				} else {
+					// Empty space — render directional slash
+					var slashGlyph string
+					switch m.PlayerDirection {
+					case UP, DOWN:
+						slashGlyph = "|"
+					case LEFT, RIGHT:
+						slashGlyph = "-"
+					}
+					mapSb.WriteString(slashStyle.Render(slashGlyph))
+				}
+				continue
 			}
 
+			// Fog of War
+			if !tile.Visible {
+				if tile.Explored {
+					switch tile.Kind {
+					case WALL:
+						mapSb.WriteString(dimWallStyle.Render(char))
+					case TOUCHING_WALL:
+						mapSb.WriteString(dimTouchingWallStyle.Render(char))
+					case FLOOR:
+						mapSb.WriteString(dimFloorStyle.Render(char))
+					case STAIRS:
+						mapSb.WriteString(dimStairStyle.Render(char))
+					case MONSTER:
+						mapSb.WriteString(dimMonsterStyle.Render("?"))
+					default:
+						mapSb.WriteString(dimStyle.Render(char))
+					}
+					continue
+				}
+				mapSb.WriteString(" ")
+				continue
+			}
+
+			// Edge-of-vision mid-brightness
+			if tile.Brightness == 0 {
+				switch tile.Kind {
+				case WALL:
+					mapSb.WriteString(midWallStyle.Render(char))
+				case TOUCHING_WALL:
+					mapSb.WriteString(midTouchingWallStyle.Render(char))
+				case FLOOR:
+					mapSb.WriteString(midFloorStyle.Render(char))
+				case MONSTER:
+					glyph := "S"
+					for _, mon := range m.Monsters {
+						if mon.X == tile.X && mon.Y == tile.Y {
+							glyph = string(mon.Glyph)
+						}
+					}
+					mapSb.WriteString(midMonsterStyle.Render(glyph))
+				case STAIRS:
+					mapSb.WriteString(midStairStyle.Render(char))
+				default:
+					mapSb.WriteString(midFloorStyle.Render(char))
+				}
+				continue
+			}
+
+			// Full brightness
 			switch tile.Kind {
 			case PLAYER:
 				mapSb.WriteString(playerStyle.Render(char))
@@ -304,6 +431,12 @@ func (m *GameStateModel) viewGame() string {
 				mapSb.WriteString(wallStyle.Render(char))
 			case FLOOR:
 				mapSb.WriteString(floorStyle.Render(char))
+			case DEAD_MONSTER:
+				if m.MonsterFlashPos != nil && tile.X == m.MonsterFlashPos.X && tile.Y == m.MonsterFlashPos.Y {
+					mapSb.WriteString(monsterFlashStyle.Render(char))
+				} else {
+					mapSb.WriteString(monsterStyle.Render(char))
+				}
 			case STAIRS:
 				mapSb.WriteString(stairStyle.Render(char))
 			default:
@@ -328,10 +461,11 @@ func (m *GameStateModel) viewGame() string {
 
 	sidebarSb := strings.Builder{}
 	sidebarSb.WriteString(headerStyle.Render(m.Player.Name) + "\n\n")
-	sidebarSb.WriteString(fmt.Sprintf("Floor:  %d\n", m.Floor))
-	sidebarSb.WriteString(fmt.Sprintf("Turn:   %s\n", m.Turn))
-	sidebarSb.WriteString(fmt.Sprintf("Health: %s / 20\n", hpRendered))
-	sidebarSb.WriteString(fmt.Sprintf("Attack: %d\n\n", m.Player.ATK))
+	fmt.Fprintf(&sidebarSb, "Floor:  %d\n", m.Floor)
+	fmt.Fprintf(&sidebarSb, "Floor Size:  %d x %d\n", len(m.Dungeon), len(m.Dungeon[0]))
+	fmt.Fprintf(&sidebarSb, "Turn:   %s\n", m.Turn)
+	fmt.Fprintf(&sidebarSb, "Health: %s / 20\n", hpRendered)
+	fmt.Fprintf(&sidebarSb, "Attack: %d\n\n", m.Player.ATK)
 
 	sidebarSb.WriteString(headerStyle.Render("Inventory") + "\n")
 	sidebarSb.WriteString("- (Empty)\n")
@@ -341,15 +475,18 @@ func (m *GameStateModel) viewGame() string {
 	// ---------------------------------------------------------
 	// 3. BUILD THE MESSAGE LOG
 	// ---------------------------------------------------------
+	// ---------------------------------------------------------
+	// 3. ASSEMBLE TOP SECTION
+	// ---------------------------------------------------------
+	topSection := lipgloss.JoinHorizontal(lipgloss.Top, mapPanel, sidebarPanel)
+
+	// ---------------------------------------------------------
+	// 4. BUILD THE MESSAGE LOG (sized to match top section)
+	// ---------------------------------------------------------
 	logCount := len(m.Log)
 	start := max(0, logCount-3)
 	recentLogs := strings.Join(m.Log[start:], "\n")
-	logPanel := logBoxStyle.Width(WIDTH + 26).Render(recentLogs)
-
-	// ---------------------------------------------------------
-	// 4. ASSEMBLE THE FINAL UI
-	// ---------------------------------------------------------
-	topSection := lipgloss.JoinHorizontal(lipgloss.Top, mapPanel, sidebarPanel)
+	logPanel := logBoxStyle.Width(lipgloss.Width(topSection) - 4).Render(recentLogs)
 	fullScreen := lipgloss.JoinVertical(lipgloss.Left, topSection, logPanel)
 	helpText := helpStyle.Render(" movement: h j k l / arrows • q: quit • enter/space: attack • t: wait")
 

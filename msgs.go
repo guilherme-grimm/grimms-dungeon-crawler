@@ -2,5 +2,5 @@ package main
 
 type PlayerTurnFinished struct{}
 type WorldTurnFinished struct{}
-type attackFinishedMsg struct{}
+type attackPhaseMsg struct{ Phase int }
 type MovementStepMsg struct{}
