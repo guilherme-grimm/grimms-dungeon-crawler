@@ -10,6 +10,10 @@ var (
 	monsterStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0044")).Bold(true)
 	stairStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")).Bold(true)
 
+	// Attack Effect Styles
+	monsterFlashStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
+	slashStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFDD44")).Bold(true)
+
 	// Environment Styles
 	wallStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("#111118"))
 	touchingWallStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#556677")).Bold(true)

@@ -9,16 +9,20 @@ import (
 
 func (m *GameStateModel) PlayerAttack() tea.Cmd {
 	m.PlayerIsAttacking = true
-
-	m.Dungeon[m.Player.Y][m.Player.X].Kind = TileKind(PLAYER_ATTACKING) // Assuming you defined this
+	m.Dungeon[m.Player.Y][m.Player.X].Kind = TileKind(PLAYER_ATTACKING)
 
 	attackPosX := m.Player.X + m.PlayerDirection.X
 	attackPosY := m.Player.Y + m.PlayerDirection.Y
+
+	// Set up attack animation state
+	m.AttackPhase = 1
+	m.AttackSlashPos = Direction{attackPosX, attackPosY}
 
 	m.Log = append(m.Log, fmt.Sprintf("Player attacked at: %v", Direction{attackPosX, attackPosY}))
 	switch m.Dungeon[attackPosY][attackPosX].Kind {
 	case MONSTER:
 		m.Log = append(m.Log, "Is a monster!")
+		m.MonsterFlashPos = &Direction{attackPosX, attackPosY}
 		for i := range m.Monsters {
 			monster := &m.Monsters[i]
 			if monster.X == attackPosX && monster.Y == attackPosY {
@@ -36,8 +40,8 @@ func (m *GameStateModel) PlayerAttack() tea.Cmd {
 		m.Log = append(m.Log, "IT's not a monster")
 	}
 
-	return tea.Tick(time.Millisecond*50, func(t time.Time) tea.Msg {
-		return attackFinishedMsg{}
+	return tea.Tick(time.Millisecond*60, func(t time.Time) tea.Msg {
+		return attackPhaseMsg{Phase: 1}
 	})
 }
 
@@ -61,7 +65,7 @@ func (m *GameStateModel) MovePlayerOneStep(move string) (TileKind, bool) {
 		newX++
 	}
 
-	if newX <= 0 || newX >= WIDTH-1 || newY <= 0 || newY >= HEIGHT-1 {
+	if newX <= 0 || newX >= len(m.Dungeon[0]) || newY <= 0 || newY >= len(m.Dungeon) {
 		return WALL, false
 	}
 
@@ -92,7 +96,7 @@ func (m *GameStateModel) MovePlayerOneStep(move string) (TileKind, bool) {
 
 // HandleStairs transitions to a new dungeon floor.
 func (m *GameStateModel) HandleStairs() {
-	dungeon := CreateNewDungeon()
+	dungeon := CreateNewDungeon(m.Floor + 1)
 	cx, cy := dungeon.Rooms[0].Center()
 
 	m.Player.X = cx
@@ -103,5 +107,7 @@ func (m *GameStateModel) HandleStairs() {
 	m.Floor++
 
 	m.Dungeon[cy][cx] = Tile{Kind: PLAYER}
+	m.Player.StandingOn = FLOOR
+
 	m.Log = append(m.Log, "Another one enters the pit of despair...")
 }

@@ -12,7 +12,7 @@ var (
 		Glyph:      'S',
 		MoveSpeed:  2,
 		HP:         10,
-		ATK:        2,
+		ATK:        0,
 		StandingOn: FLOOR,
 	}
 	BRUTE Entity = Entity{
@@ -20,7 +20,7 @@ var (
 		MoveSpeed:  1,
 		Glyph:      'B',
 		HP:         10,
-		ATK:        3,
+		ATK:        0,
 		StandingOn: FLOOR,
 	}
 	SHADE Entity = Entity{
@@ -28,14 +28,26 @@ var (
 		MoveSpeed:  3,
 		Glyph:      'W',
 		HP:         10,
-		ATK:        1,
+		ATK:        0,
 		StandingOn: FLOOR,
 	}
 )
 
 var possibleMonsters []Entity = []Entity{SNEK, BRUTE, SHADE}
 
-func CreateNewDungeon() Dungeon {
+func dungeonSize(floor int) (width, height int) {
+	baseW, baseH := START_WIDTH, START_HEIGHT
+	growW, growH := 10, 5
+	maxW, maxH := 160, 80
+
+	w := baseW + (floor-1)*growW
+	h := baseH + (floor-1)*growH
+
+	return min(w, maxW), min(h, maxH)
+}
+
+func CreateNewDungeon(floor int) Dungeon {
+	WIDTH, HEIGHT := dungeonSize(floor)
 	tiles := make([][]Tile, HEIGHT)
 	// Fill with Walls
 	for y := range HEIGHT {
@@ -53,8 +65,12 @@ func CreateNewDungeon() Dungeon {
 	}
 
 	rooms := make([]Room, 0)
+	mult := 1
+	if floor >= 5 && floor%5 == 0 {
+		mult++
+	}
 
-	for i := 0; i <= 40; i++ {
+	for i := 0; i <= 40*mult; i++ {
 		w := rand.IntN(8-5) + 5
 		h := rand.IntN(7-4) + 4
 		x := rand.IntN(WIDTH-w-1) + 1

@@ -45,7 +45,7 @@ func (m *GameStateModel) greedyMove(targetPos, enemyPos Direction) Direction {
 		newX := enemyPos.X + d.X
 		newY := enemyPos.Y + d.Y
 
-		if newX < 0 || newY < 0 || newX >= WIDTH || newY >= HEIGHT {
+		if newX < 0 || newY < 0 || newX >= len(m.Dungeon[0]) || newY >= len(m.Dungeon) {
 			continue
 		}
 
@@ -67,7 +67,7 @@ func (m *GameStateModel) greedyMove(targetPos, enemyPos Direction) Direction {
 			newX := enemyPos.X + d.X
 			newY := enemyPos.Y + d.Y
 
-			if newX < 0 || newY < 0 || newX >= WIDTH || newY >= HEIGHT {
+			if newX < 0 || newY < 0 || newX >= START_WIDTH || newY >= START_HEIGHT {
 				continue
 			}
 

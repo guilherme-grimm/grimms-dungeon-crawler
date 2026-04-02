@@ -32,6 +32,11 @@ type GameStateModel struct {
 	PlayerDirection   Direction
 	StepsRemaining    int
 	MoveInput         string
+
+	// Attack animation state
+	AttackPhase     int        // 0=idle, 1=frame1, 2=frame2
+	AttackSlashPos  Direction  // tile where slash renders
+	MonsterFlashPos *Direction // tile of flashed monster (nil = no flash)
 }
 
 type Direction struct {
@@ -68,8 +73,8 @@ var (
 )
 
 const (
-	WIDTH  = 80
-	HEIGHT = 24
+	START_WIDTH  = 80
+	START_HEIGHT = 24
 )
 
 type model int
