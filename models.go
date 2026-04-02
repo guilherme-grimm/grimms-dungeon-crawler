@@ -82,16 +82,18 @@ type model int
 type tickMsg time.Time
 
 type Tile struct {
-	Kind     TileKind // Wall, Floor, Player
-	Visible  bool
-	Explored bool
-	X, Y     int
+	Kind       TileKind // Wall, Floor, Player
+	Visible    bool
+	Explored   bool
+	Brightness int // 0=edge, 1=mid, 2=full
+	X, Y       int
 }
 
 type Entity struct {
 	X, Y        int
 	MoveSpeed   int // determine how much tiles per turn
 	AttackSpeed int // determine attack cooldown in turns
+	ViewRadius  int
 	Name        string
 	HP, ATK     int
 	Glyph       rune
@@ -103,4 +105,6 @@ type Dungeon struct {
 	Tiles    [][]Tile
 	Rooms    []Room
 	Monsters []Entity
+	StartX   int
+	StartY   int
 }

@@ -10,6 +10,21 @@ var (
 	monsterStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0044")).Bold(true)
 	stairStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")).Bold(true)
 
+	// Fog of War — explored but not visible (dim)
+	dimWallStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("#0a0a10"))
+	dimTouchingWallStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#2a3338"))
+	dimFloorStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#151515"))
+	dimStairStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#666620"))
+	dimMonsterStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#661122"))
+	dimStyle             = lipgloss.NewStyle().Foreground(lipgloss.Color("#111111"))
+
+	// Mid-brightness — edge of vision radius
+	midWallStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("#0d0d14"))
+	midTouchingWallStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#3d4d55"))
+	midFloorStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#1a1a1a"))
+	midMonsterStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#992233"))
+	midStairStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#999930")).Bold(true)
+
 	// Attack Effect Styles
 	monsterFlashStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
 	slashStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFDD44")).Bold(true)

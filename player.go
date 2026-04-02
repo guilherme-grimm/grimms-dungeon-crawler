@@ -90,6 +90,7 @@ func (m *GameStateModel) MovePlayerOneStep(move string) (TileKind, bool) {
 	m.Player.X = newX
 	m.Player.Y = newY
 	m.Dungeon[newY][newX].Kind = PLAYER
+	m.UpdateVisibility()
 
 	return destinationKind, true
 }
@@ -97,7 +98,7 @@ func (m *GameStateModel) MovePlayerOneStep(move string) (TileKind, bool) {
 // HandleStairs transitions to a new dungeon floor.
 func (m *GameStateModel) HandleStairs() {
 	dungeon := CreateNewDungeon(m.Floor + 1)
-	cx, cy := dungeon.Rooms[0].Center()
+	cx, cy := dungeon.StartX, dungeon.StartY
 
 	m.Player.X = cx
 	m.Player.Y = cy
@@ -108,6 +109,8 @@ func (m *GameStateModel) HandleStairs() {
 
 	m.Dungeon[cy][cx] = Tile{Kind: PLAYER}
 	m.Player.StandingOn = FLOOR
+
+	m.UpdateVisibility()
 
 	m.Log = append(m.Log, "Another one enters the pit of despair...")
 }

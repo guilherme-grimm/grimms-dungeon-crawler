@@ -12,11 +12,12 @@ import (
 
 func initialGameState() GameStateModel {
 	dungeon := CreateNewDungeon(0)
-	cx, cy := dungeon.Rooms[0].Center()
+	cx, cy := dungeon.StartX, dungeon.StartY
 	player := Entity{
 		X:          cx,
 		Y:          cy,
 		Name:       "Grimmm",
+		ViewRadius: 10,
 		MoveSpeed:  1,
 		StandingOn: FLOOR,
 		HP:         20,
@@ -26,8 +27,7 @@ func initialGameState() GameStateModel {
 	dungeon.Tiles[player.Y][player.X] = Tile{
 		Kind: PLAYER,
 	}
-
-	return GameStateModel{
+	m := GameStateModel{
 		Screen:          MENU_SCREEN,
 		Dungeon:         dungeon.Tiles,
 		Player:          player,
@@ -39,6 +39,10 @@ func initialGameState() GameStateModel {
 		PlayerDirection: DOWN,
 		Log:             []string{"Leave behind all hope thou who enter here..."},
 	}
+
+	m.UpdateVisibility()
+
+	return m
 }
 
 func main() {
@@ -355,12 +359,55 @@ func (m *GameStateModel) viewGame() string {
 				continue
 			}
 
-			// Fog of War stub
-			if !tile.Explored {
-				// mapSb.WriteString(" ")
-				// continue
+			// Fog of War
+			if !tile.Visible {
+				if tile.Explored {
+					switch tile.Kind {
+					case WALL:
+						mapSb.WriteString(dimWallStyle.Render(char))
+					case TOUCHING_WALL:
+						mapSb.WriteString(dimTouchingWallStyle.Render(char))
+					case FLOOR:
+						mapSb.WriteString(dimFloorStyle.Render(char))
+					case STAIRS:
+						mapSb.WriteString(dimStairStyle.Render(char))
+					case MONSTER:
+						mapSb.WriteString(dimMonsterStyle.Render("?"))
+					default:
+						mapSb.WriteString(dimStyle.Render(char))
+					}
+					continue
+				}
+				mapSb.WriteString(" ")
+				continue
 			}
 
+			// Edge-of-vision mid-brightness
+			if tile.Brightness == 0 {
+				switch tile.Kind {
+				case WALL:
+					mapSb.WriteString(midWallStyle.Render(char))
+				case TOUCHING_WALL:
+					mapSb.WriteString(midTouchingWallStyle.Render(char))
+				case FLOOR:
+					mapSb.WriteString(midFloorStyle.Render(char))
+				case MONSTER:
+					glyph := "S"
+					for _, mon := range m.Monsters {
+						if mon.X == tile.X && mon.Y == tile.Y {
+							glyph = string(mon.Glyph)
+						}
+					}
+					mapSb.WriteString(midMonsterStyle.Render(glyph))
+				case STAIRS:
+					mapSb.WriteString(midStairStyle.Render(char))
+				default:
+					mapSb.WriteString(midFloorStyle.Render(char))
+				}
+				continue
+			}
+
+			// Full brightness
 			switch tile.Kind {
 			case PLAYER:
 				mapSb.WriteString(playerStyle.Render(char))
